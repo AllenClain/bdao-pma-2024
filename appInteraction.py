@@ -217,6 +217,14 @@ def load_genres_and_palt(timeslot):
 
     return genre, plat
 
+@callback(
+    Output("search-page", "max_value"),
+    Input("pivot-total", "children")
+)
+def prepare_pagination(total_str):
+    ttl = int(total_str)
+    return ttl // 10 + 1
+
 ## control search result
 @callback(
     Output("search_result", "children"),

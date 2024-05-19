@@ -361,7 +361,18 @@ bottom_bar = dbc.Row([
 
         dbc.Row(dbc.Col([
             dbc.Table(id="search_result")
-            ]))
+            ])),
+
+        dbc.Row(dbc.Col([
+            html.P("Showing 10 instances in one page.", className="fw-lighter fs-6"),
+            dbc.Pagination(id="search-page", 
+                           max_value=10,
+                           first_last=True, previous_next=True,
+                           fully_expanded=False,
+                           size="sm")
+            ]),
+            class_name="align-items-center justify-content-start py-2"
+            )
         
         ],
         class_name="col-9 border-start border-2",
