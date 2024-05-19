@@ -1,4 +1,4 @@
-from dash import Dash, html, dcc, State, callback, Output, Input, clientside_callback
+from dash import State, callback, Output, Input, clientside_callback
 import pandas as pd
 import plotly.express as px
 import dash_bootstrap_components as dbc
@@ -6,11 +6,7 @@ import dash_bootstrap_components as dbc
 # Incorporate data
 path = "./data"
 
-movies    = pd.read_csv(path + "/Movies.csv", index_col="ID")
-country   = pd.read_csv(path + "/Country.csv")
-directors = pd.read_csv(path + "/Directors.csv")
 genres    = pd.read_csv(path + "/Genres.csv")
-language  = pd.read_csv(path + "/Language.csv")
 platform  = pd.read_csv(path + "/Platform.csv")
 library   = pd.read_csv(path + "/MoviesLibrary.csv", index_col="ID")
 

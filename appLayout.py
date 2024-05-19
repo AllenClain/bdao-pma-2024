@@ -1,9 +1,7 @@
-from dash import Dash, html, dcc
-import pandas as pd
-import plotly.express as px
+from dash import html, dcc
 import dash_bootstrap_components as dbc
 
-from appInteraction import movies, country, directors, genres, language, platform, library
+from appInteraction import library, platform
 
 dbc_css = "https://cdn.jsdelivr.net/gh/AnnMarieW/dash-bootstrap-templates/dbc.min.css"
 
@@ -170,7 +168,7 @@ total_plat = dbc.Row([
     ),
 
     dbc.Col(
-        f"{movies['Title'].count()}",
+        f"{library['Title'].count()}",
         id="pivot-total",
         class_name="col-6 lead fw-bold fs-2 text-danger"
     )
