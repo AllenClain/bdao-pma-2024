@@ -201,6 +201,7 @@ graph_genres_plat_filter = dbc.Row(
 graph_genres_sort_ratings = dbc.Row([
     dbc.Col(
         dbc.Switch(id="genres-sort_ratings",
+                   value=False,
                    label="Sort: Ratings", 
                    style={"font-size": ".8rem"}), 
         class_name="col-12 d-flex justify-content-end")
@@ -216,6 +217,7 @@ mid_bar = dbc.Row([
         dbc.Row([plat_stat['Netflix'], plat_stat['Hulu']], class_name="py-3"),
         dbc.Row([plat_stat['Prime Video'], plat_stat['Disney+']]),
         html.Hr(),
+        dbc.Row(dbc.Col("Time range: ", class_name="text-start"), class_name="p-3"),
         dcc.RangeSlider(1900, 2020, step=5, 
                         marks={
                             1900: "1900",
@@ -333,8 +335,9 @@ bottom_bar = dbc.Row([
         dbc.Row([
             dbc.Col(
                 dbc.Switch(id="plat-agg_ratings", 
-                        label="Ratings", 
-                        style={"font-size": ".8rem"}), 
+                           value=False,
+                           label="Ratings", 
+                           style={"font-size": ".8rem"}), 
                 class_name="col-12 d-flex justify-content-end")
             ],
             class_name="align-items-center"

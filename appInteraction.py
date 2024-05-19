@@ -4,7 +4,7 @@ import plotly.express as px
 import dash_bootstrap_components as dbc
 
 # Incorporate data
-path = "."
+path = "./data"
 
 movies    = pd.read_csv(path + "/Movies.csv", index_col="ID")
 country   = pd.read_csv(path + "/Country.csv")
@@ -97,26 +97,34 @@ def select_top_rated(timeslot):
 @callback(
     Output("graph-top_genres_bar", "figure"),
     Input("timeslot-selector", "value"),
-
+    Input("genres-sort_ratings", "value"),
     Input("genres-plat_filter", "value")
 )
-def draw_top_genres(timeslot, filter_plat):
-    if filter_plat is None:
-        filter_plat = ["Netflix", "Hulu", "Prime Video", "Disney+"]
+def draw_top_genres(timeslot, sort_ratings, filter_plat):
+    if filter_plat is None or filter_plat == []:
+        sel = (library[["Year", "IMDb"]].loc[(timeslot[0] <= library['Year'])&
+                                     (library['Year'] <= timeslot[1])]
+                                .merge(genres, on="ID", how="left")
+                                .drop(columns="Year"))
+    else:
+        sel = (library[["Year", "IMDb"]]
+            .loc[(timeslot[0] <= library['Year'])&
+                    (library['Year'] <= timeslot[1])&
+                    (platform["Platform"].isin(filter_plat))]
+            .merge(genres, on="ID", how="left")
+            .drop(columns="Year"))
     
-    sel = (library[["Year"]]
-           .loc[(timeslot[0] <= library['Year'])&
-                (library['Year'] <= timeslot[1])&
-                (platform["Platform"].isin(filter_plat))]
-           .merge(genres, on="ID", how="left")
-           .drop(columns="Year"))
-    
+    sel = sel.groupby("Genres").agg(
+            {"ID": "count", "IMDb": "mean"}
+        ).sort_values(
+            "IMDb" if sort_ratings else "ID"
+         ).tail(10).reset_index().rename(columns={"ID": "Num"})
+
     fig = px.bar(
-        sel.groupby("Genres").count().sort_values("ID").tail(10)
-        .reset_index().rename(columns={"ID": "Num"}),
+        sel,
         x="Num", y="Genres", 
         orientation="h",
-        hover_data=['Num'])
+        hover_data=['Num', "IMDb"])
     
     fig.update_layout(
         template="plotly_white",
@@ -144,24 +152,27 @@ def draw_top_genres(timeslot, filter_plat):
 @callback(
     Output("graph-genres_plat_heat1", "figure"),
     Output("graph-genres_plat_heat2", "figure"),
-    Input("timeslot-selector", "value")
+    Input("timeslot-selector", "value"),
+    Input("plat-agg_ratings", "value")
 )
-def draw_genres_bet_plat(timeslot):
-    sel = (library[["Year"]]
+def draw_genres_bet_plat(timeslot, agg_ratings):
+    sel = (library[["Year", "IMDb"]]
            .loc[(timeslot[0] <= library['Year'])&
                 (library['Year'] <= timeslot[1])]
            .merge(genres, on="ID", how="left")
            .drop(columns="Year"))
     
     df = (sel.merge(platform, on="ID", how="left")
-          .groupby(by=["Genres", "Platform"]).count()
+          .groupby(by=["Genres", "Platform"]).agg({"ID": "count", "IMDb": "mean"})
           .reset_index("Platform"))
     
-    df['Netflix'] = df['ID'].loc[df['Platform'] == "Netflix"]
-    df['Hulu'] = df['ID'].loc[df['Platform'] == "Hulu"]
-    df['Prime Video'] = df['ID'].loc[df['Platform'] == "Prime Video"]
-    df['Disney+'] = df['ID'].loc[df['Platform'] == "Disney+"]
-    df = df.drop(columns=["Platform", "ID"]).groupby("Genres").max()
+    target = "IMDb" if agg_ratings else "ID"
+
+    df['Netflix'] = df[target].loc[df['Platform'] == "Netflix"].round(2)
+    df['Hulu'] = df[target].loc[df['Platform'] == "Hulu"].round(2)
+    df['Prime Video'] = df[target].loc[df['Platform'] == "Prime Video"].round(2)
+    df['Disney+'] = df[target].loc[df['Platform'] == "Disney+"].round(2)
+    df = df.drop(columns=["Platform", "ID", "IMDb"]).groupby("Genres").max()
 
     fig1 = px.imshow(df.head(df.shape[0] // 2).T, text_auto=True)
     fig2 = px.imshow(df.tail(df.shape[0] // 2).T, text_auto=True)
@@ -188,6 +199,23 @@ def draw_genres_bet_plat(timeslot):
 
     return fig1, fig2
 
+## load genres and platform
+@callback(
+    Output("search-filter_genres", "options"),
+    Output("search-filter_plat", "options"),
+    Input("timeslot-selector", "value")
+)
+def load_genres_and_palt(timeslot):
+    sel = (library[["Year"]].loc[(timeslot[0] <= library['Year'])&
+                                 (library['Year'] <= timeslot[1])])
+    gr = sel.merge(genres, on="ID", how="left")["Genres"].drop_duplicates().dropna().sort_values().values
+
+    pl = sel.merge(platform, on="ID", how="left")["Platform"].drop_duplicates().dropna().sort_values().values
+
+    genre = {key: key for key in gr}
+    plat = {key: key for key in pl}
+
+    return genre, plat
 
 ## control search result
 @callback(
@@ -198,6 +226,20 @@ def draw_genres_bet_plat(timeslot):
     Input("search-filter_plat", "value"),
     Input("timeslot-selector", "value")
 )
-def search_result(sort_by, ascending, filter_genres, filter_plat, timeslot):
-    pass
+def search_result(sort_by, ascend, filter_genres, filter_plat, timeslot):
+    sel = (library[["Title", "Year", "Directors", 
+                    "IMDb", "Genres", "Platform"]]
+                    .loc[(timeslot[0] <= library['Year'])&
+                         (library['Year'] <= timeslot[1])]
+                    .sort_values(by=sort_by, ascending=(not ascend))).fillna('')
+    
+    if filter_genres is not None and filter_genres != []:
+        sel = sel.loc[sel["Genres"].apply(lambda s: sum([gr in s for gr in filter_genres]) > 0)]
+
+    if filter_plat is not None and filter_plat != []:
+        sel = sel.loc[sel["Platform"].apply(lambda s: sum([pl in s for pl in filter_plat]) > 0)]
+
+    return dbc.Table.from_dataframe(sel.head(10), size="sm", striped=True, bordered=True, hover=True)
+
+
 
